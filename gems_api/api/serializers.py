@@ -12,6 +12,12 @@ class DealSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+class ItemSerializer(serializers.ModelSerializer):
+    name = serializers.CharField()
+
+
 class TopSerializer(serializers.Serializer):
     username = serializers.CharField(source='customer')
     spent_money = serializers.IntegerField()
+    gems = serializers.ListField()
+
