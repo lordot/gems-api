@@ -1,5 +1,6 @@
 from rest_framework import serializers
-from .models import Deal
+
+from .models import Customer, Deal, Item
 
 
 class CSVImportSerializer(serializers.Serializer):
@@ -9,15 +10,30 @@ class CSVImportSerializer(serializers.Serializer):
 class DealSerializer(serializers.ModelSerializer):
     class Meta:
         model = Deal
-        fields = '__all__'
+        fields = ['total', 'quantity', 'date']
+
+
+class CustomerSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(
+        min_length=4, max_length=15, allow_blank=False
+    )
+
+    class Meta:
+        model = Customer
+        fields = ['username']
 
 
 class ItemSerializer(serializers.ModelSerializer):
-    name = serializers.CharField()
+    name = serializers.CharField(
+        min_length=4, max_length=15, allow_blank=False
+    )
+
+    class Meta:
+        model = Item
+        fields = ['name']
 
 
 class TopSerializer(serializers.Serializer):
-    username = serializers.CharField(source='customer')
+    username = serializers.CharField()
     spent_money = serializers.IntegerField()
     gems = serializers.ListField()
-
