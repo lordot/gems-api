@@ -1,42 +1,33 @@
-from django.db.models import Count, Subquery, Sum
+from django.db.models import Count, Subquery, Sum, OuterRef
 from rest_framework.exceptions import ValidationError
 
 from .models import Customer, Deal, Item
 from .serializers import CustomerSerializer, DealSerializer, ItemSerializer
 
 
-def get_top_customers():
+def get_top_and_deals():
     """
-    Подзапрос SQL для получения списка топ клиентов с группировкой по тратам
+    SQL запрос для получения топ клиентов и сделок с топ камнями.
+    В результате получаем два списка для сведения данных.
     """
-    return Customer.objects.annotate(
+    top_customers = Customer.objects.annotate(
         spent_money=Sum('deals__total')).order_by('-spent_money')[:5]
 
-
-def get_gems(top_customers):
-    """
-    Подзапрос SQL для получения списка популярных камней среди топ покупателей
-    """
-    return Item.objects.filter(
-        deals__customer__in=Subquery(top_customers.values('id'))).annotate(
+    top_gems = Item.objects.filter(
+        deals__customer__in=top_customers).annotate(
         buyers=Count('deals__customer__username', distinct=True)).filter(
         buyers__gte=2)
 
-
-def get_top_and_deals():
-    """
-    Основной SQL запрос для получения топ клиентов и популярных камней.
-    В результате получаем два списка для сведения данных.
-    """
-    top_customers = get_top_customers()
-    top_gems = get_gems(top_customers)
     gems_by_customers = Deal.objects.filter(
-        customer__in=Subquery(top_customers.values('id')),
-        item__in=Subquery(top_gems.values('id')))
-    top_customers = list(top_customers.values('username', 'spent_money'))
-    deals = list(gems_by_customers.values(
+        customer__in=top_customers,
+        item__in=top_gems
+    )
+
+    top_customers_data = list(top_customers.values('username', 'spent_money'))
+    deals_data = list(gems_by_customers.values(
         'customer__username', 'item__name').distinct())
-    return top_customers, deals
+
+    return top_customers_data, deals_data
 
 
 def bulk_items_and_customers(reader):
@@ -56,7 +47,6 @@ def bulk_items_and_customers(reader):
         try:
             if (row['customer'] not in ex_cust and
                     row['customer'] not in new_cust):
-
                 customer_serializer = CustomerSerializer(
                     data={'username': row['customer']}
                 )
